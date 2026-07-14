@@ -195,6 +195,27 @@ document.addEventListener('DOMContentLoaded', async function() {
     // preserve ordering (React before ReactDOM before Babel before text/babel).
     const doc = new DOMParser().parseFromString(template, 'text/html');
     document.documentElement.replaceWith(doc.documentElement);
+    // Réinjecter les éléments PWA après le remplacement du document
+if (!document.querySelector('link[rel="manifest"]')) {
+  const manifestLink = document.createElement('link');
+  manifestLink.rel = 'manifest';
+  manifestLink.href = './manifest.webmanifest';
+  document.head.appendChild(manifestLink);
+}
+
+if (!document.querySelector('meta[name="theme-color"]')) {
+  const themeColor = document.createElement('meta');
+  themeColor.name = 'theme-color';
+  themeColor.content = '#ec3013';
+  document.head.appendChild(themeColor);
+}
+
+if (!document.querySelector('link[rel="apple-touch-icon"]')) {
+  const appleIcon = document.createElement('link');
+  appleIcon.rel = 'apple-touch-icon';
+  appleIcon.href = './apple-touch-icon.png';
+  document.head.appendChild(appleIcon);
+}
     const dead = Array.from(document.scripts);
     for (const old of dead) {
       const s = document.createElement('script');
