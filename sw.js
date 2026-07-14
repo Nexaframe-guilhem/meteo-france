@@ -1,5 +1,5 @@
 // PRÉVI° Météo France — service worker
-const CACHE = 'previ-meteo-v2';
+const CACHE = 'previ-meteo-v3';
 const ASSETS = [
   './',
   './index.html',
