@@ -1,47 +1,65 @@
-// PRÉVI° Météo France — service worker
-const CACHE = 'previ-meteo-v3';
-const ASSETS = [
-  './',
-  './index.html',
-  './manifest.webmanifest',
-  './icon-192.png',
-  './icon-512.png',
-  './icon-maskable-512.png',
-  './apple-touch-icon.png',
-  './favicon.png'
+const CACHE_NAME = "previ-cache-v5";
+
+const FILES_TO_CACHE = [
+  "./",
+  "./index.html",
+  "./manifest.webmanifest",
+  "./favicon.png",
+  "./icon-192.png",
+  "./icon-512.png"
 ];
 
-self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)).then(() => self.skipWaiting()));
-});
-
-self.addEventListener('activate', (e) => {
-  e.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)))
-    ).then(() => self.clients.claim())
+self.addEventListener("install", event => {
+  event.waitUntil(
+    caches
+      .open(CACHE_NAME)
+      .then(cache => cache.addAll(FILES_TO_CACHE))
+      .then(() => self.skipWaiting())
   );
 });
 
-self.addEventListener('fetch', (e) => {
-  const req = e.request;
-  if (req.method !== 'GET') return;
-  const url = new URL(req.url);
+self.addEventListener("activate", event => {
+  event.waitUntil(
+    caches
+      .keys()
+      .then(cacheNames =>
+        Promise.all(
+          cacheNames
+            .filter(cacheName => cacheName !== CACHE_NAME)
+            .map(cacheName => caches.delete(cacheName))
+        )
+      )
+      .then(() => self.clients.claim())
+  );
+});
 
-  // Live weather/geo APIs: network-first, no caching of stale data
-  if (url.hostname.endsWith('open-meteo.com') || url.hostname.includes('geocoding')) {
-    e.respondWith(fetch(req).catch(() => caches.match(req)));
+self.addEventListener("fetch", event => {
+  if (event.request.method !== "GET") {
     return;
   }
 
-  // App shell: cache-first, fall back to network then cached index
-  e.respondWith(
-    caches.match(req).then((hit) =>
-      hit || fetch(req).then((res) => {
-        const copy = res.clone();
-        caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {});
-        return res;
-      }).catch(() => caches.match('./index.html'))
-    )
+  const requestUrl = new URL(event.request.url);
+
+  // Ne met pas en cache les appels API météo externes.
+  if (requestUrl.origin !== self.location.origin) {
+    return;
+  }
+
+  event.respondWith(
+    fetch(event.request)
+      .then(response => {
+        if (!response || response.status !== 200) {
+          return response;
+        }
+
+        const responseClone = response.clone();
+
+        caches.open(CACHE_NAME).then(cache => {
+          cache.put(event.request, responseClone);
+        });
+
+        return response;
+      })
+      .catch(() => caches.match(event.request))
   );
 });
